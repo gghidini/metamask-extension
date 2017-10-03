@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script type="text/javascript" src="scripts/web3.min.js"></script>
+    <script type="text/javascript" src="scripts/MetaMaskBug2114.js"></script>
+  </head>
+  <body>
+    <h2>Bug 2114</h2>
+    <script>
+      setTimeout(function() {
+        console.log(Web3);
+        if (typeof web3 !== 'undefined') {
+          // Use Mist/MetaMask's provider
+          window.web3 = new Web3(web3.currentProvider);
+          window.web3.version.getNode(
+            function(error, result) {
+              if (error) {
+                console.error(error);
+              } else {
+                console.log(`You're connected to ${result}`);
+                const Contract = window.web3.eth.contract(JSON.parse(abi));
+                const contract = Contract.at('0x46105b226398ab00adbaca1489e35a17fd382bdb');
+                console.log(`Loaded contract at: ${contract.address}`);
+                contract.LogEvent({}, {fromBlock: 0, toBlock: 'latest'}).watch(
+                  function(error, result) {
+                    if (error) {
+                      console.log(error);
+                    } else {
+                      console.log(`Event: ${JSON.stringify(result, null, '  ')}`);
+                      // alert(`Event: ${JSON.stringify(result, null, '  ')}`);
+                    }
+                  }
+                );
+              }
+            }
+          );
+
+        } else {
+          console.log('No web3? You should consider trying MetaMask!')
+          // fallback - use your fallback strategy (local node / hosted node + in-dapp id mgmt / fail)
+          window.web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
+        }
+      }, 5000);
+
+
+    </script>
+  </body>
+</html>

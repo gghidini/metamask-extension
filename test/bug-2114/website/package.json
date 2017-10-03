@@ -1,0 +1,15 @@
+{
+  "name": "bug-2114",
+  "version": "0.0.1",
+  "description": "Web page to demo bug 2114 on MetaMask",
+  "main": "index.js",
+  "scripts": {
+    "start": "serve -s public",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Giacomo Ghidini",
+  "license": "ISC",
+  "dependencies": {
+    "serve": "^6.2.0"
+  }
+}

@@ -1,0 +1,1 @@
+const abi = '[{"constant":false,"inputs":[],"name":"fireEvent","outputs":[],"payable":false,"type":"function"},{"anonymous":false,"inputs":[{"indexed":true,"name":"sender","type":"address"}],"name":"LogEvent","type":"event"}]';
