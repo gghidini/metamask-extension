@@ -1,11 +1,184 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <!--
+      Imported Web3.js v. 0.18.4 from
+      https://github.com/ethereum/web3.js/tree/0.18.4
+    -->
     <script type="text/javascript" src="scripts/web3.min.js"></script>
+    <!-- Load contract JSON ABI into JavaScript variable -->
     <script type="text/javascript" src="scripts/MetaMaskBug2114.js"></script>
   </head>
   <body>
-    <h2>Bug 2114</h2>
+    <h2>Demo MetaMask issue 2114</h2>
+    <p>
+      Attempt to demo problem reported in
+      <a
+        href='https://github.com/MetaMask/metamask-extension/issues/2114#issuecomment-333174005'
+        target='_blank'
+      >
+        https://github.com/MetaMask/metamask-extension/issues/2114#issuecomment-333174005
+      </a>,
+      namely that events are silently filtered somewhere between
+      the Infura JSON RPC API and the MetaMask Chrome plugin in the browser.
+    </p>
+    <p>
+      I deployed a simple event-firing contract at
+      <a
+        href='https://rinkeby.etherscan.io/address/0x46105b226398ab00adbaca1489e35a17fd382bdb'
+        target='_blank'
+      >
+        https://rinkeby.etherscan.io/address/0x46105b226398ab00adbaca1489e35a17fd382bdb
+      </a>.
+      (Solidity source code in the contract subdirectory in this repo.)
+    </p>
+    <p>
+      For these experiments, I'm using:
+      <ul>
+        <li>
+          MetaMask 3.10.8
+        </li>
+        <li>
+          Chrome Version 60.0.3112.113 (Official Build) (64-bit)
+        </li>
+        <li>
+          Web3.js 0.18.4
+        </li>
+      </ul>
+    </p>
+    <p>
+      Contract fired two events upon processing transactions I sent:
+      <ol>
+        <li>
+          <a
+            href='https://rinkeby.etherscan.io/tx/0x5a532f188338de65c7c39bbae619b9bd11cfe1810baeadaa5cf9a0d189034194#eventlog'
+            target='_blank'
+          >
+            https://rinkeby.etherscan.io/tx/0x5a532f188338de65c7c39bbae619b9bd11cfe1810baeadaa5cf9a0d189034194#eventlog
+          </a>
+        </li>
+        <li>
+          <a
+            href='https://rinkeby.etherscan.io/tx/0x0763212ed21c3924cfb992e1f02f5c8d87ced05e89591caba3be9f1b92a3c704#eventlog'
+            target='_blank'
+          >
+            https://rinkeby.etherscan.io/tx/0x0763212ed21c3924cfb992e1f02f5c8d87ced05e89591caba3be9f1b92a3c704#eventlog
+          </a>
+        </li>
+      </ol>
+    </p>
+    <p>
+      The DApp in this Web page watches the events on the contract, but
+      the Infura-backed MetaMask Chrome plugin NEVER calls back.
+    </p>
+    <p>
+      On top of that, no error is fired. Earlier versions of MetaMask would fire:
+      <pre>
+        Error: Gateway timeout. The request took too long to process.
+          This can happen when querying logs over too wide a block range.
+          at Object.InvalidResponse (errors.js:35)
+          at requestmanager.js:86
+          at inpage.js:209
+          at inpage.js:8205
+      </pre>
+    </p>
+    <p>
+      Follow the logs in the console for details.
+    </p>
+    <p>
+      MetaMask DOES NOT call back even when I filter down to the block where
+      the event was fired (e.g., with
+      <pre>{fromBlock: 1002589, toBlock: 1002589}</pre>
+      for the first event. (One can reproduce by editing the source code in
+      the script element in this HTML Web page and then reload--without
+      re-starting the HTTP server)
+    </p>
+    <p>
+      The event logs DO exist on the Infura endpoint:
+      <pre>
+        $ curl -X POST -s --data '{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"fromBlock": "0xf4c5d", "toBlock": "0xf4c5d"}],"id":74}' https://rinkeby.infura.io | jq .
+        {
+          "jsonrpc": "2.0",
+          "id": 74,
+          "result": [
+            { ... },
+            {
+              "address": "0x46105b226398ab00adbaca1489e35a17fd382bdb",
+              "topics": [
+                "0x6cb3ef98ecf9979af0c5a4c4d73f1235106be2c0e6932586f7bba2c05ea6c672",
+                "0x000000000000000000000000560c7cb958f235f7772ced2af64a0b5eba4d32e5"
+              ],
+              "data": "0x",
+              "blockNumber": "0xf4c5d",
+              "transactionHash": "0x5a532f188338de65c7c39bbae619b9bd11cfe1810baeadaa5cf9a0d189034194",
+              "transactionIndex": "0x1",
+              "blockHash": "0x1a5b5eedfb49d4732e84311f71ca92d8dc66a6b85cc9e753d4ba3c99e89f70e5",
+              "logIndex": "0x1",
+              "removed": false
+            }
+          ]
+        }
+      </pre>
+      <pre>
+        $ curl -X POST -s --data '{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"fromBlock": "0xf4cb1", "toBlock": "0xf4cb1"}],"id":74}' https://rinkeby.infura.io | jq .
+        {
+          "jsonrpc": "2.0",
+          "id": 74,
+          "result": [
+            {
+              "address": "0x46105b226398ab00adbaca1489e35a17fd382bdb",
+              "topics": [
+                "0x6cb3ef98ecf9979af0c5a4c4d73f1235106be2c0e6932586f7bba2c05ea6c672",
+                "0x000000000000000000000000560c7cb958f235f7772ced2af64a0b5eba4d32e5"
+              ],
+              "data": "0x",
+              "blockNumber": "0xf4cb1",
+              "transactionHash": "0x0763212ed21c3924cfb992e1f02f5c8d87ced05e89591caba3be9f1b92a3c704",
+              "transactionIndex": "0x1",
+              "blockHash": "0x42bffea3561ddbe1ad54e3d31fcf062b98dc19caaa8ac46fa4276433047139b1",
+              "logIndex": "0x0",
+              "removed": false
+            }
+          ]
+        }
+      </pre>
+    </p>
+    <p>
+      Mist (0.9.0) DOES call back w/ the events:
+      <pre>
+        You're connected to Geth/v1.6.6-stable-10a45cb5/linux-amd64/go1.8.3
+        (index):77 Loaded contract at: 0x46105b226398ab00adbaca1489e35a17fd382bdb
+        (index):78 Waiting for callbacks w/ contract events...
+        (index):84 Event: {
+          "address": "0x46105b226398ab00adbaca1489e35a17fd382bdb",
+          "blockNumber": 1002589,
+          "transactionHash": "0x5a532f188338de65c7c39bbae619b9bd11cfe1810baeadaa5cf9a0d189034194",
+          "transactionIndex": 1,
+          "blockHash": "0x1a5b5eedfb49d4732e84311f71ca92d8dc66a6b85cc9e753d4ba3c99e89f70e5",
+          "logIndex": 1,
+          "removed": false,
+          "event": "LogEvent",
+          "args": {
+            "sender": "0x560c7cb958f235f7772ced2af64a0b5eba4d32e5"
+          }
+        }
+        (index):84 Event: {
+          "address": "0x46105b226398ab00adbaca1489e35a17fd382bdb",
+          "blockNumber": 1002673,
+          "transactionHash": "0x0763212ed21c3924cfb992e1f02f5c8d87ced05e89591caba3be9f1b92a3c704",
+          "transactionIndex": 1,
+          "blockHash": "0x42bffea3561ddbe1ad54e3d31fcf062b98dc19caaa8ac46fa4276433047139b1",
+          "logIndex": 0,
+          "removed": false,
+          "event": "LogEvent",
+          "args": {
+            "sender": "0x560c7cb958f235f7772ced2af64a0b5eba4d32e5"
+          }
+        }
+      </pre>
+      One can view the console on Mist by right-clicking on the DApp Web page and then
+      clicking on Open Developer Tools.
+    </p>
     <script>
       setTimeout(function() {
         console.log(Web3);
@@ -21,6 +194,7 @@
                 const Contract = window.web3.eth.contract(JSON.parse(abi));
                 const contract = Contract.at('0x46105b226398ab00adbaca1489e35a17fd382bdb');
                 console.log(`Loaded contract at: ${contract.address}`);
+                console.log(`Waiting for callbacks w/ contract events...`);
                 contract.LogEvent({}, {fromBlock: 0, toBlock: 'latest'}).watch(
                   function(error, result) {
                     if (error) {
